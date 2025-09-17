@@ -6,3 +6,42 @@
 .card .book{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
 .card .book.secondary{background:#e6eef8;color:var(--accent)}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.page-btn {
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.page-btn:hover:not([disabled]) {
+  background: #f0f0f0;
+}
+
+.page-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.page-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  margin-left: 10px;
+  font-size: 0.875rem;
+  color: #666;
+}

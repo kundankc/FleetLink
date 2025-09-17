@@ -2,19 +2,22 @@ import React, { useEffect, useState } from 'react';
 import API from '../services/api';
 import '../pages/pages.css';
 import Spinner from '../components/Spinner';
+import Pagination from '../components/Pagination';
 
 export default function Bookings() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [msg, setMsg] = useState(null);
+  const [pagination, setPagination] = useState({ page: 1, limit: 5, total: 0, pages: 1 });
 
-  const load = async () => {
+  const load = async (page = 1) => {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await API.get('/bookings');
-      setBookings(res.data);
+      const res = await API.get('/bookings', { params: { page, limit: pagination.limit } });
+      setBookings(res.data.bookings);
+      setPagination(res.data.pagination);
     } catch (err) {
       setMsg({ type: 'error', text: err?.response?.data?.error || 'Failed to load bookings' });
     } finally {
@@ -23,6 +26,10 @@ export default function Bookings() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handlePageChange = (page) => {
+    load(page);
+  };
 
   const cancel = async (id) => {
     setBusyId(id);
@@ -60,6 +67,13 @@ export default function Bookings() {
               ))}
             </div>
           )
+        )}
+        
+        {!loading && bookings.length > 0 && (
+          <Pagination 
+            pagination={pagination} 
+            onPageChange={handlePageChange} 
+          />
         )}
       </div>
     </div>

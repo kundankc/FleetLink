@@ -1,6 +1,7 @@
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
 const { estimatedRideDurationHours } = require('../utils/Duration');
+const { validatePincode } = require('../utils/validation');
 
 exports.createVehicle = async (req, res) => {
   const { name, capacityKg, tyres } = req.body;
@@ -23,6 +24,14 @@ exports.getAvailableVehicles = async (req, res) => {
     if (!capacityRequired || !fromPincode || !toPincode || !startTime) {
       return res.status(400).json({ error: 'Missing query params' });
     }
+    
+    if (!validatePincode(fromPincode)) {
+      return res.status(400).json({ error: 'From pincode must be 5-6 digits' });
+    }
+    if (!validatePincode(toPincode)) {
+      return res.status(400).json({ error: 'To pincode must be 5-6 digits' });
+    }
+    
     const capacity = Number(capacityRequired);
     const start = new Date(startTime);
     if (isNaN(start)) return res.status(400).json({ error: 'Invalid startTime' });
@@ -37,8 +46,14 @@ exports.getAvailableVehicles = async (req, res) => {
     }
     const end = new Date(start.getTime() + dur * 3600 * 1000);
 
-    // find vehicles with enough capacity
-    const vehicles = await Vehicle.find({ capacityKg: { $gte: capacity } }).lean();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const allVehicles = await Vehicle.find({ capacityKg: { $gte: capacity } }).lean();
+    const totalVehicles = allVehicles.length;
+    
+    const vehicles = allVehicles.slice(skip, skip + limit);
 
     // for each vehicle check bookings overlap
     const available = [];
@@ -60,7 +75,15 @@ exports.getAvailableVehicles = async (req, res) => {
       }
     }
 
-    return res.json(available);
+    return res.json({
+      vehicles: available,
+      pagination: {
+        total: totalVehicles,
+        page,
+        limit,
+        pages: Math.ceil(totalVehicles / limit)
+      }
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Internal error' });

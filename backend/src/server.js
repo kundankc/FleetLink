@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const routes = require('./routes');
+const seedDatabase = require('./utils/seedDatabase');
 
 const app = express();
 app.use(cors());
@@ -16,8 +17,11 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/fleetlink'
 
 if (require.main === module) {
   mongoose.connect(MONGO_URI, { })
-    .then(() => {
+    .then(async () => {
       console.log('MongoDB connected');
+      
+      await seedDatabase();
+      
       app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
     })
     .catch(err => {

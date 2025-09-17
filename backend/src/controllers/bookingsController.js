@@ -2,11 +2,19 @@ const mongoose = require('mongoose');
 const Vehicle = require('../models/Vehicle');
 const Booking = require('../models/Booking');
 const { estimatedRideDurationHours } = require('../utils/Duration');
+const { validatePincode } = require('../utils/validation');
 
 exports.createBooking = async (req, res) => {
   const { vehicleId, fromPincode, toPincode, startTime, customerId } = req.body;
   if (!vehicleId || !fromPincode || !toPincode || !startTime || !customerId) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (!validatePincode(fromPincode)) {
+    return res.status(400).json({ error: 'From pincode must be 5-6 digits' });
+  }
+  if (!validatePincode(toPincode)) {
+    return res.status(400).json({ error: 'To pincode must be 5-6 digits' });
   }
 
   const vehicle = await Vehicle.findById(vehicleId);
@@ -18,7 +26,6 @@ exports.createBooking = async (req, res) => {
   const duration = estimatedRideDurationHours(fromPincode, toPincode);
   const end = new Date(start.getTime() + duration * 3600 * 1000);
 
-  // Use a transaction to re-check and create atomically (best-effort)
   let session;
   try {
     session = await mongoose.startSession();
@@ -53,7 +60,6 @@ exports.createBooking = async (req, res) => {
 
       return res.status(201).json(booking[0]);
     } catch (txErr) {
-      // Transactions may not be supported (e.g., in-memory MongoDB). Fall back to non-transactional check+create.
       try {
         if (session.inTransaction()) {
           await session.abortTransaction();
@@ -93,8 +99,29 @@ exports.createBooking = async (req, res) => {
 
 exports.listBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find().populate('vehicleId').lean();
-    return res.json(bookings);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [bookings, total] = await Promise.all([
+      Booking.find()
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 })
+        .populate('vehicleId')
+        .lean(),
+      Booking.countDocuments()
+    ]);
+
+    return res.json({
+      bookings,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Internal error' });
