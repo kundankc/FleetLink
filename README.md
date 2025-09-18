@@ -102,7 +102,7 @@ docker compose down
 This will start:
 1. MongoDB database
 2. Backend API server (available at http://localhost:5000/api)
-3. Frontend web application (available at http://localhost:3000)
+3. Frontend web application (available at http://localhost:4173)
 
 ### Local Development
 
